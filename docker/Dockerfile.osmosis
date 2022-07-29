@@ -1,0 +1,29 @@
+FROM golang:1.18.4-alpine3.15 AS go-builder
+ARG TAG
+
+# Usage:
+#   docker build . --build-arg TAG=v7.1.0 -t publicawesome/osmosis:7.1.0 -f docker/Dockerfile.osmosis
+
+RUN set -eux; apk add --no-cache ca-certificates build-base;
+
+RUN apk add --no-cache ca-certificates build-base git
+
+WORKDIR /code
+
+RUN git clone https://github.com/osmosis-labs/osmosis
+ADD https://github.com/CosmWasm/wasmvm/releases/download/v1.0.0-beta7/libwasmvm_muslc.a /lib/libwasmvm_muslc.a
+RUN sha256sum /lib/libwasmvm_muslc.a | grep d0152067a5609bfdfb3f0d5d6c0f2760f79d5f2cd7fd8513cafa9932d22eb350
+RUN cd osmosis && git checkout $TAG && LEDGER_ENABLED=FALSE BUILD_TAGS=muslc make build
+
+
+# --------------------------------------------------------
+FROM alpine:3.15
+
+COPY --from=go-builder /code/osmosis/build/osmosisd /usr/bin/osmosisd
+RUN apk add -U --no-cache ca-certificates
+WORKDIR /home/osmosis
+ENV HOME=/home/osmosis
+EXPOSE 1317
+EXPOSE 26656
+EXPOSE 26657
+EXPOSE 9090

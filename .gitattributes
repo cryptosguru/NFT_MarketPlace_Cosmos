@@ -1,0 +1,2 @@
+*.pb.go -merge
+*.pb.go linguist-generated=true
